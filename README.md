@@ -1,7 +1,7 @@
 The purpose of this project is to match place texts to a database of current and historical
 standardized places that includes geo-position information.
 
-__[Try the demo](http://vivid-journey-2382.herokuapp.com/)__.
+__[Try the demo](http://opensource.werelate.org:7001)__.
 
 Database
 --------
@@ -82,6 +82,16 @@ own matching algorithm, feel free to use these texts as test data.
 
 Caveat: due to privacy concerns, place texts containing numbers (about 400K) were
 removed from the data set.
+
+License
+-------
+The source code is available under the [Apache 2.0 license](http://www.apache.org/licenses/LICENSE-2.0).
+Data files in the resources directories are available under a [Creative Commons Attribution-ShareAlike license](http://creativecommons.org/licenses/by-sa/3.0/).
+
+Support
+-------
+
+Support is available via the [Google group](https://groups.google.com/group/folg-places)
 
 Roadmap
 -------
