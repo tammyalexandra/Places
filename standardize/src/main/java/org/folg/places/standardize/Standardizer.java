@@ -278,11 +278,11 @@ public class Standardizer {
          p.setStandardizer(this);
          p.setId(Integer.parseInt(fields[0]));
          p.setName(fields[1]);
-         if (fields[2].length() > 0) p.setAltNames(fields[2].split(","));
-         if (fields[3].length() > 0) p.setTypes(fields[3].split(","));
+         if (fields[2].length() > 0) setAltNames(p, fields[2].split("~"));
+         if (fields[3].length() > 0) p.setTypes(fields[3].split("~"));
          p.setLocatedInId(Integer.parseInt(fields[4]));
          if (fields[5].length() > 0) {
-            String[] idStrings = fields[5].split(",");
+            String[] idStrings = fields[5].split("~");
             int[] ids = new int[idStrings.length];
             for (int i = 0; i < idStrings.length; i++) {
                ids[i] = Integer.parseInt(idStrings[i]);
@@ -293,9 +293,44 @@ public class Standardizer {
          p.setCountry(Integer.parseInt(fields[7]));
          if (fields.length > 8 && fields[8].length() > 0) p.setLatitude(Double.parseDouble(fields[8]));
          if (fields.length > 9 && fields[9].length() > 0) p.setLongitude(Double.parseDouble(fields[9]));
+         if (fields.length > 10 && fields[10].length() > 0) setSources(p, fields[10].split("~"));
 
          placeIndex.put(p.getId(), p);
       }
+   }
+
+   private void setAltNames(Place p, String[] altNameStrings) {
+      Place.AltName[] altNames = new Place.AltName[altNameStrings.length];
+      for (int i = 0; i < altNameStrings.length; i++) {
+         String altNameString = altNameStrings[i];
+         Place.AltName altName;
+         int pos = altNameString.indexOf(':');
+         if (pos > 0) {
+            altName = new Place.AltName(altNameString.substring(0,pos), altNameString.substring(pos+1));
+         }
+         else {
+            altName = new Place.AltName(altNameString, null);
+         }
+         altNames[i] = altName;
+      }
+      p.setAltNames(altNames);
+   }
+
+   private void setSources(Place p, String[] sourceStrings) {
+      Place.Source[] sources = new Place.Source[sourceStrings.length];
+      for (int i = 0; i < sourceStrings.length; i++) {
+         String sourceString = sourceStrings[i];
+         Place.Source source;
+         int pos = sourceString.indexOf(':');
+         if (pos > 0) {
+            source = new Place.Source(sourceString.substring(0,pos), sourceString.substring(pos+1));
+         }
+         else {
+            source = new Place.Source(sourceString, null);
+         }
+         sources[i] = source;
+      }
+      p.setSources(sources);
    }
 
    public void setErrorHandler(ErrorHandler errorHandler) {

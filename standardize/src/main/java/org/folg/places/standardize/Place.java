@@ -25,9 +25,26 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement
 public class Place {
+   public static class AltName {
+      public String altName;
+      public String source;
+      public AltName(String altName, String source) {
+         this.altName = altName;
+         this.source = source;
+      }
+   }
+   public static class Source {
+      public String source;
+      public String id;
+      public Source(String source, String id) {
+         this.source = source;
+         this.id = id;
+      }
+   }
+
    private int id = 0;
    private String name = null;
-   private String[] altNames = null;
+   private AltName[] altNames = null;
    private String[] types = null;
    private int locatedInId = 0;
    private int[] alsoLocatedInIds = null;
@@ -35,6 +52,7 @@ public class Place {
    private int country = 0;
    private double latitude = 0.0;
    private double longitude = 0.0;
+   private Source[] sources = null;
    private Standardizer standardizer = null;
 
    public int getId() {
@@ -53,11 +71,11 @@ public class Place {
       this.name = name;
    }
 
-   public String[] getAltNames() {
+   public AltName[] getAltNames() {
       return altNames;
    }
 
-   public void setAltNames(String[] altNames) {
+   public void setAltNames(AltName[] altNames) {
       this.altNames = altNames;
    }
 
@@ -115,6 +133,14 @@ public class Place {
 
    public void setLongitude(double longitude) {
       this.longitude = longitude;
+   }
+
+   public Source[] getSources() {
+      return sources;
+   }
+
+   public void setSources(Source[] sources) {
+      this.sources = sources;
    }
 
    void setStandardizer(Standardizer standardizer) {

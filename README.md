@@ -87,6 +87,7 @@ License
 -------
 The source code is available under the [Apache 2.0 license](http://www.apache.org/licenses/LICENSE-2.0).
 Data files in the resources directories are available under a [Creative Commons Attribution-ShareAlike license](http://creativecommons.org/licenses/by-sa/3.0/).
+See the LICENSE file for details.
 
 Support
 -------
@@ -114,6 +115,12 @@ adding alternate names and new places to the WeRelate place wiki when necessary.
 to WeRelate, we can track which place texts in those GEDCOMs don't get matched.
 Someone could review the frequent non-matching place texts and create pages for them
 on the WeRelate place wiki if they are indeed real places.
+
+Changes log
+-----------
+
+* 1.0 - Jan 2012 - initial launch
+* 1.1 - 29 Feb 2012 - add sources for places, requires a change in places.csv file format
 
 Other projects
 --------------

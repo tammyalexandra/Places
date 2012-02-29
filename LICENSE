@@ -2,6 +2,20 @@ Data files in the resources directories are available under a
 Creative Commons Attribution-ShareAlike license, which is available at
 http://creativecommons.org/licenses/by-sa/3.0/
 
+The last column in the places.csv file contains a list of external sources used
+for each place. The sources (so far) are:
+* Getty Thesaurus of Geographic Names: http://www.getty.edu/research/tools/vocabularies/tgn/
+* Family History Library Catalog (fhlc): https://www.familysearch.org/eng/library/fhlc/
+* Wikipedia: http://en.wikipedia.org
+
+Alternate names listed in the places.csv file may also include sources.
+If an alternate name has a source, it appears in the form "alternate name:source".
+
+Under the Creative Commons Attribution-ShareAlike license, you must attribute WeRelate
+and the other sources and agree to share your modifications if you use the information
+in these data files
+
+
 The source code is available under the Apache 2.0 license, which is
 reprinted below.
                                  Apache License

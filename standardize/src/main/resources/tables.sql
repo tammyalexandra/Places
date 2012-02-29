@@ -6,7 +6,7 @@ create table place_words (
 create table places (
   id varchar(8),
   name varchar(255) not null default '',
-  alt_names varchar(1024) not null default '',
+  alt_names varchar(4096) not null default '',
   types varchar(64) not null default '',
   located_in_id int,
   also_located_in_ids varchar(64) not null default '',
@@ -14,5 +14,6 @@ create table places (
   country_id int,
   latitude decimal(9,6),
   longitude decimal(9,6),
+  sources varchar(1024) not null default '',
   primary key (id)
 );
