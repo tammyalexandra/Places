@@ -38,14 +38,14 @@ public class Normalizer {
       // read properties file
       try {
          Properties props = new Properties();
-         props.load(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("normalizer.properties"), "UTF8"));
+         props.load(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("place-normalizer.properties"), "UTF8"));
          // build character replacements
          characterReplacements = new HashMap<Character, String>();
          for (String replacement : props.getProperty("characterReplacements").split(",")) {
             characterReplacements.put(replacement.charAt(0), replacement.substring(2));
          }
       } catch (IOException e) {
-         throw new RuntimeException("normalizer.properties not found");
+         throw new RuntimeException("place-normalizer.properties not found");
       }
    }
 
@@ -87,13 +87,17 @@ public class Normalizer {
                levels.add(levelWords);
                levelWords = new ArrayList<String>();
             }
-         } else if ((replacement = characterReplacements.get(c)) != null) {
+         }
+         else if ((replacement = characterReplacements.get(c)) != null) {
             buf.append(replacement.toLowerCase());
-         } else if (c >= 'A' && c <= 'Z') {
+         }
+         else if (c >= 'A' && c <= 'Z') {
             buf.append(Character.toLowerCase(c));
-         } else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+         }
+         else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
             buf.append(c);
-         } else if (Character.isLetter(c)) {
+         }
+         else if (Character.isLetter(c)) {
             // ignore letters > U+0250; they're generally from scripts that don't map well to roman letters
             // ignore 186,170: superscript o and a used in spanish numbers: 1^a and 2^o
             // ignore 440,439: Ezh and reverse-Ezh; the only times they appear in the data is in what appears to be noise
@@ -123,10 +127,21 @@ public class Normalizer {
    /**
     * Remove diacritics, lowercase, and remove non alphanumeric characters
     *
-    * @param text string to tokenize
-    * @return tokenized place levels
+    * @param text string to normalize
+    * @return normalized name
     */
    public String normalize(String text) {
+      return normalize(text, false);
+   }
+
+   /**
+    * Remove diacritics, lowercase, and remove non alphanumeric characters
+    *
+    * @param text string to normalize
+    * @param allowWildcards if true, keep ?* characters
+    * @return normalized name
+    */
+   public String normalize(String text, boolean allowWildcards) {
       StringBuilder buf = new StringBuilder();
 
       for (int i = 0; i < text.length(); i++) {
@@ -135,11 +150,17 @@ public class Normalizer {
 
          if ((replacement = characterReplacements.get(c)) != null) {
             buf.append(replacement.toLowerCase());
-         } else if (c >= 'A' && c <= 'Z') {
+         }
+         else if (c >= 'A' && c <= 'Z') {
             buf.append(Character.toLowerCase(c));
-         } else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+         }
+         else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
             buf.append(c);
-         } else if (Character.isLetter(c)) {
+         }
+         else if (allowWildcards && (c == '?' || c == '*')) {
+            buf.append(c);
+         }
+         else if (Character.isLetter(c)) {
             // ignore letters > U+0250; they're generally from scripts that don't map well to roman letters
             // ignore 186,170: superscript o and a used in spanish numbers: 1^a and 2^o
             // ignore 440,439: Ezh and reverse-Ezh; the only times they appear in the data is in what appears to be noise

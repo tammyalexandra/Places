@@ -144,7 +144,7 @@ public class Standardizer {
       try {
          // read properties
          Properties props = new Properties();
-         props.load(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("standardizer.properties"), "UTF8"));
+         props.load(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("place-standardizer.properties"), "UTF8"));
 
          // read type words
          typeWords = new HashSet<String>(Arrays.asList(props.getProperty("typeWords").split(",")));
