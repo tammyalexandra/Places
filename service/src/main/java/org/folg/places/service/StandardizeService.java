@@ -34,7 +34,7 @@ public class StandardizeService {
            @PathParam("text") String text,
            @QueryParam("defaultCountry") String defaultCountry, // TODO currently unavailable
            @QueryParam("mode") String modeString,
-           @QueryParam("count") int count) {
+           @QueryParam("max") int max) {
 
       Standardizer.Mode mode = Standardizer.Mode.BEST;
       if ("required".equalsIgnoreCase(modeString)) {
@@ -44,14 +44,14 @@ public class StandardizeService {
          mode = Standardizer.Mode.NEW;
       }
 
-      if (count <= 0) {
-         count = 1;
+      if (max <= 0) {
+         max = 3;
       }
-      else if (count > 10) {
-         count = 10;
+      else if (max > 100) {
+         max = 100;
       }
 
-      List<Standardizer.PlaceScore> results  = Standardizer.getInstance().standardize(text, defaultCountry, mode, count);
+      List<Standardizer.PlaceScore> results  = Standardizer.getInstance().standardize(text, defaultCountry, mode, max);
       return results;
    }
 }

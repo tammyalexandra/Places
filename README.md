@@ -50,10 +50,26 @@ small sample.
 Interestingly, this finding is similar to Nature's finding that the community-created Wikipedia
 and the professionally-managed Encyclopedia Britannica had roughly the same number of errors.
 
+Service
+-------
+
+This application is currently running on heroku as a REST service.  You can access it using the following URLs:
+
+* `http://folg-places.herokuapp.com/api/standardize/<text to standardize>`
+* `http://folg-places.herokuapp.com/api/places/<place id to look up>`
+
+The standardize service accepts an optional `max` query parameter, which governs the maximum number of places to return.
+The default is 3; the greatest possible value is 100.
+
+For example,
+
+* [http://folg-places.herokuapp.com/api/standardize/Madison?max=100](http://folg-places.herokuapp.com/api/standardize/Madison?max=100)
+* [http://folg-places.herokuapp.com/api/places/156510](http://folg-places.herokuapp.com/api/places/156510)
+
 Building
 --------
 
-You'll need maven. `mvn install` creates the normal jar files as well as ones with all dependencies
+You'll need maven. `mvn install` creates the jar files
 
 Tools
 -----
@@ -71,8 +87,6 @@ Tools
 The tools (except for the service of course) can be run using
 `mvn exec:java -Dexec.mainClass=org.folg.places.tools.<tool name> -Dexec.args="<args>"`
 
-The service module generates a war file that can be run using tomcat, jetty, etc.
-
 Other resources
 ---------------
 
@@ -88,11 +102,6 @@ License
 The source code is available under the [Apache 2.0 license](http://www.apache.org/licenses/LICENSE-2.0).
 Data files in the resources directories are available under a [Creative Commons Attribution-ShareAlike license](http://creativecommons.org/licenses/by-sa/3.0/).
 See the LICENSE file for details.
-
-Support
--------
-
-Support is available via the [Google group](https://groups.google.com/group/folg-places)
 
 Roadmap
 -------
@@ -119,8 +128,9 @@ on the WeRelate place wiki if they are indeed real places.
 Changes log
 -----------
 
-* 1.0 - Jan 2012 - initial launch
-* 1.1 - 29 Feb 2012 - add sources for places, requires a change in places.csv file format
+* 1.0.0 - Jan 2012 - initial launch
+* 1.1.0 - 29 Feb 2012 - add sources for places, requires a change in places.csv file format
+* 1.1.1 - 6 Aug 2012 - convert the service module into a REST service that runs on heroku
 
 Other projects
 --------------
