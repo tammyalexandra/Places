@@ -200,7 +200,7 @@ public class Standardizer {
                       // ignore
                    }
                 }
-                return ids != null ? ids : new Integer[0];
+                return ids;
              }
        });
 
