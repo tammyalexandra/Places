@@ -16,18 +16,23 @@
 
 package org.folg.places.standardize;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.mchange.v2.c3p0.DataSources;
-import net.spy.memcached.AddrUtil;
-import net.spy.memcached.BinaryConnectionFactory;
-import net.spy.memcached.MemcachedClient;
 
 import javax.sql.DataSource;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -43,7 +48,12 @@ public class Standardizer {
     */
    public static enum Mode { BEST, REQUIRED, NEW };
 
-   public static int MAX_LEVELS = 4;
+   public static final int MAX_LEVELS = 4;
+   public static final int PLACE_CACHE_MAX_SIZE = 50000;
+   public static final int PLACE_CACHE_MAX_SECONDS = 3600;
+   public static final int WORD_CACHE_MAX_SIZE = 50000;
+   public static final int WORD_CACHE_MAX_SECONDS = 3600;
+   public static final String DB_DRIVER_CLASS = "com.mysql.jdbc.Driver";
 
    private static Logger logger = Logger.getLogger("org.folg.places.standardize");
    private static int USA_ID = 1500;
@@ -73,18 +83,16 @@ public class Standardizer {
    }
 
    private static ComboPooledDataSource staticDS = null;
-   private static synchronized DataSource getDataSource(String driverClass, String jdbcUrl, String user, String password) {
+   private static synchronized DataSource getDataSource(String url) {
      if (staticDS == null) {
         staticDS = new ComboPooledDataSource();
         try {
-           Class.forName(driverClass).newInstance();
-           staticDS.setDriverClass(driverClass);
+           Class.forName(DB_DRIVER_CLASS).newInstance();
+           staticDS.setDriverClass(DB_DRIVER_CLASS);
         } catch (Exception e) {
            throw new RuntimeException("Error loading database driver: "+e.getMessage());
         }
-        staticDS.setJdbcUrl(jdbcUrl);
-        staticDS.setUser(user);
-        staticDS.setPassword(password);
+        staticDS.setJdbcUrl(url);
         Runtime.getRuntime().addShutdownHook(new Thread() {
            public void run() {
               try {
@@ -98,27 +106,6 @@ public class Standardizer {
      return staticDS;
    }
 
-   private static class DaemonBinaryConnectionFactory extends BinaryConnectionFactory {
-      @Override
-      public boolean isDaemon() {
-         return true;
-      }
-   }
-
-   private static MemcachedClient staticMC = null;
-   private static synchronized MemcachedClient getMemcachedClient(String memcacheAddresses) {
-      // assume memcacheAddresses parameter always has the same value
-      if (staticMC == null) {
-         try {
-            staticMC = new MemcachedClient(new DaemonBinaryConnectionFactory(),
-                                           AddrUtil.getAddresses(memcacheAddresses));
-         } catch (IOException e) {
-            logger.severe("Unable to initialize memcache client");
-         }
-      }
-      return staticMC;
-   }
-
    private Normalizer normalizer = null;
    private Set<String> typeWords = null;
    private Map<String,String> abbreviations = null;
@@ -126,9 +113,6 @@ public class Standardizer {
    private Map<Integer,Place> placeIndex = null;
    private Map<String,Integer[]> wordIndex = null;
    private DataSource dataSource = null;
-   private MemcachedClient memcachedClient = null;
-   private String memcacheKeyPrefix = null;
-   private int memcacheExpiration = 0;
    private Set<Integer> largeCountries = null;
    private Set<Integer> mediumCountries = null;
    private double primaryMatchWeight = 0;
@@ -136,6 +120,89 @@ public class Standardizer {
    private Double[] mediumCountryLevelWeights = null;
    private Double[] smallCountryLevelWeights = null;
    private ErrorHandler errorHandler = null;
+
+   LoadingCache<Integer, Place> placeCache = CacheBuilder.newBuilder()
+       .maximumSize(PLACE_CACHE_MAX_SIZE)
+       .expireAfterWrite(PLACE_CACHE_MAX_SECONDS, TimeUnit.SECONDS)
+       .build(
+          new CacheLoader<Integer, Place>() {
+             public Place load(Integer id) {
+                Connection conn = null;
+                PreparedStatement ps = null;
+                ResultSet rs = null;
+                Place p = null;
+                try {
+                   conn = dataSource.getConnection();
+                   ps = conn.prepareStatement("select * from places where id = ?");
+                   ps.setInt(1, id);
+                   rs = ps.executeQuery();
+                   if (rs.next()) {
+                      p = constructPlace(rs.getInt("id"), rs.getString("name"), rs.getString("alt_names"),
+                                       rs.getString("types"), rs.getInt("located_in_id"), rs.getString("also_located_in_ids"),
+                                       rs.getInt("level"), rs.getInt("country_id"), rs.getDouble("latitude"), rs.getDouble("longitude"),
+                                       rs.getString("sources"));
+                   }
+                } catch (SQLException e) {
+                   logger.severe("Error reading places: "+e);
+                } finally {
+                   try {
+                      if (rs != null) {
+                         rs.close();
+                      }
+                      if (ps != null) {
+                         ps.close();
+                      }
+                      if (conn != null) {
+                         conn.close();
+                      }
+                   }
+                   catch (Exception e) {
+                      // ignore
+                   }
+                }
+                return p;
+             }
+       });
+
+   LoadingCache<String, Integer[]>  wordCache = CacheBuilder.newBuilder()
+       .maximumSize(WORD_CACHE_MAX_SIZE)
+       .expireAfterWrite(WORD_CACHE_MAX_SECONDS, TimeUnit.SECONDS)
+       .build(
+          new CacheLoader<String, Integer[]>() {
+             public Integer[] load(String word) {
+                Connection conn = null;
+                PreparedStatement ps = null;
+                ResultSet rs = null;
+                Integer[] ids = null;
+                try {
+                   conn = dataSource.getConnection();
+                   ps = conn.prepareStatement("select ids from place_words where word = ?");
+                   ps.setString(1, word);
+                   rs = ps.executeQuery();
+                   if (rs.next()) {
+                      ids = constructPlaceWords(rs.getString("ids"));
+                   }
+                } catch (SQLException e) {
+                   logger.severe("Error reading place_words: "+e);
+                } finally {
+                   try {
+                      if (rs != null) {
+                         rs.close();
+                      }
+                      if (ps != null) {
+                         ps.close();
+                      }
+                      if (conn != null) {
+                         conn.close();
+                      }
+                   }
+                   catch (Exception e) {
+                      // ignore
+                   }
+                }
+                return ids != null ? ids : new Integer[0];
+             }
+       });
 
    private Standardizer() {
       normalizer = Normalizer.getInstance();
@@ -178,28 +245,10 @@ public class Standardizer {
 
          primaryMatchWeight = Double.parseDouble(props.getProperty("primaryMatchWeight"));
 
-         // initialize db+memcache
-         InputStream propStream = getClass().getClassLoader().getResourceAsStream("db_memcache.properties");
-         if (propStream != null) {
-            props = new Properties();
-            props.load(new InputStreamReader(propStream, "UTF8"));
-            // read common similar names, either from the database or from a file
-            String databaseDriver = props.getProperty("databaseDriver");
-            if (databaseDriver != null) {
-               // given and surname Standardizer's share the same dataSource
-               dataSource = getDataSource(databaseDriver,
-                                         props.getProperty("databaseURL"),
-                                         props.getProperty("databaseUser"),
-                                         props.getProperty("databasePassword"));
-
-               // given and surname Standardizer's share the same memcachedClient
-               String memcacheAddresses = props.getProperty("memcacheAddresses");
-               if (memcacheAddresses != null) {
-                  memcachedClient = getMemcachedClient(memcacheAddresses);
-                  memcacheKeyPrefix = props.getProperty("memcacheKeyPrefix")+"p|";
-                  memcacheExpiration = Integer.parseInt(props.getProperty("memcacheExpiration"));
-               }
-            }
+         // initialize db
+         String databaseUrl = System.getenv("DATABASE_URL");
+         if (databaseUrl != null) {
+            dataSource = getDataSource(databaseUrl);
          }
 
          // if not reading from database, read from file
@@ -246,6 +295,15 @@ public class Standardizer {
       return result;
    }
 
+   private Integer[] constructPlaceWords(String idString) {
+      String[] idStrings = idString.split(",");
+      Integer[] ids = new Integer[idStrings.length];
+      for (int i = 0; i < idStrings.length; i++) {
+         ids[i] = Integer.parseInt(idStrings[i]);
+      }
+      return ids;
+   }
+
    /**
     * Read the word index
     * You would not normally call this function. Used in testing
@@ -256,48 +314,9 @@ public class Standardizer {
       String line;
       while ((line = r.readLine()) != null) {
          String[] fields = line.split("\\|");
-         String[] idStrings = fields[1].split(",");
-         Integer[] ids = new Integer[idStrings.length];
-         for (int i = 0; i < idStrings.length; i++) {
-            ids[i] = Integer.parseInt(idStrings[i]);
-         }
+         Integer[] ids = constructPlaceWords(fields[1]);
 
          wordIndex.put(fields[0], ids);
-      }
-   }
-
-   /**
-    * Read the place index
-    * You would not normally call this function. Used in testing
-    */
-   public void readPlaceIndex(Reader reader) throws IOException {
-      placeIndex = new HashMap<Integer, Place>();
-      BufferedReader r = new BufferedReader(reader);
-      String line;
-      while ((line = r.readLine()) != null) {
-         String[] fields = line.split("\\|");
-         Place p = new Place();
-         p.setStandardizer(this);
-         p.setId(Integer.parseInt(fields[0]));
-         p.setName(fields[1]);
-         if (fields[2].length() > 0) setAltNames(p, fields[2].split("~"));
-         if (fields[3].length() > 0) p.setTypes(fields[3].split("~"));
-         p.setLocatedInId(Integer.parseInt(fields[4]));
-         if (fields[5].length() > 0) {
-            String[] idStrings = fields[5].split("~");
-            int[] ids = new int[idStrings.length];
-            for (int i = 0; i < idStrings.length; i++) {
-               ids[i] = Integer.parseInt(idStrings[i]);
-            }
-            p.setAlsoLocatedInIds(ids);
-         }
-         p.setLevel(Integer.parseInt(fields[6]));
-         p.setCountryId(Integer.parseInt(fields[7]));
-         if (fields.length > 8 && fields[8].length() > 0) p.setLatitude(Double.parseDouble(fields[8]));
-         if (fields.length > 9 && fields[9].length() > 0) p.setLongitude(Double.parseDouble(fields[9]));
-         if (fields.length > 10 && fields[10].length() > 0) setSources(p, fields[10].split("~"));
-
-         placeIndex.put(p.getId(), p);
       }
    }
 
@@ -335,13 +354,74 @@ public class Standardizer {
       p.setSources(sources);
    }
 
+   private Place constructPlace(int id, String name, String altNames, String types, int locatedInId, String alsoLocatedInIds,
+                                       int level, int countryId, double latitude, double longitude, String sources) {
+      Place p = new Place();
+      p.setStandardizer(this);
+      p.setId(id);
+      p.setName(name);
+      if (altNames.length() > 0) setAltNames(p, altNames.split("~"));
+      if (types.length() > 0) p.setTypes(types.split("~"));
+      p.setLocatedInId(locatedInId);
+      if (alsoLocatedInIds.length() > 0) {
+         String[] idStrings = alsoLocatedInIds.split("~");
+         int[] ids = new int[idStrings.length];
+         for (int i = 0; i < idStrings.length; i++) {
+            ids[i] = Integer.parseInt(idStrings[i]);
+         }
+         p.setAlsoLocatedInIds(ids);
+      }
+      p.setLevel(level);
+      p.setCountryId(countryId);
+      p.setLatitude(latitude);
+      p.setLongitude(longitude);
+      if (sources.length() > 0) setSources(p, sources.split("~"));
+      return p;
+   }
+
+   /**
+    * Read the place index
+    * You would not normally call this function. Used in testing
+    */
+   public void readPlaceIndex(Reader reader) throws IOException {
+      placeIndex = new HashMap<Integer, Place>();
+      BufferedReader r = new BufferedReader(reader);
+      String line;
+      while ((line = r.readLine()) != null) {
+         String[] fields = line.split("\\|");
+         Place p = constructPlace(
+                 Integer.parseInt(fields[0]), // id
+                 fields[1], // name
+                 fields[2], // altNames
+                 fields[3], // types
+                 Integer.parseInt(fields[4]), // located in id
+                 fields[5], // also located in ids
+                 Integer.parseInt(fields[6]), // level
+                 Integer.parseInt(fields[7]), // country id
+                 fields.length > 8 && fields[8].length() > 0 ? Double.parseDouble(fields[8]) : 0.0,
+                 fields.length > 9 && fields[9].length() > 0 ? Double.parseDouble(fields[9]) : 0.0,
+                 fields.length > 10 && fields[10].length() > 0 ? fields[10] : "");
+         placeIndex.put(p.getId(), p);
+      }
+   }
+
    public void setErrorHandler(ErrorHandler errorHandler) {
       this.errorHandler = errorHandler;
    }
 
    // return null if word not found
    private List<Integer> lookupWord(String word) {
-      Integer[] ids = wordIndex.get(word);
+      Integer[] ids = null;
+      if (wordIndex != null) {
+         ids = wordIndex.get(word);
+      }
+      else {
+         try {
+            ids = wordCache.get(word);
+         } catch (ExecutionException e) {
+            logger.severe("Error loading place words: " + e);
+         }
+      }
       if (ids != null) {
          return Arrays.asList(ids);
       }
@@ -349,7 +429,17 @@ public class Standardizer {
    }
 
    public Place getPlace(int id) {
-      Place p = placeIndex.get(id);
+      Place p = null;
+      if (placeIndex != null) {
+         p = placeIndex.get(id);
+      }
+      else {
+         try {
+            p = placeCache.get(id);
+         } catch (ExecutionException e) {
+            logger.severe("Error loading place: "+ e);
+         }
+      }
       if (p == null) {
          logger.severe("Place not found: "+id);
       }

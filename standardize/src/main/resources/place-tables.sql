@@ -4,7 +4,7 @@ create table place_words (
   primary key (word)
 );
 create table places (
-  id varchar(8),
+  id int,
   name varchar(255) not null default '',
   alt_names varchar(4096) not null default '',
   types varchar(64) not null default '',
