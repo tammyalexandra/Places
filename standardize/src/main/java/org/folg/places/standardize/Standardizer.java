@@ -23,6 +23,7 @@ import net.spy.memcached.BinaryConnectionFactory;
 import net.spy.memcached.MemcachedClient;
 
 import javax.sql.DataSource;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
@@ -36,7 +37,7 @@ import java.util.logging.Logger;
 public class Standardizer {
    /**
     * Standardization mode:
-    * BEST=get the closest country
+    * BEST=get the closest matching place
     * REQUIRED=match must include the left-most level or not at all,
     * NEW=BEST+1 -- if you can't include the next level to the left, return a fake place with it as the name
     */
@@ -52,6 +53,7 @@ public class Standardizer {
       return standardizer;
    }
 
+   @XmlRootElement
    public static class PlaceScore {
       private Place place;
       private double score;
@@ -290,7 +292,7 @@ public class Standardizer {
             p.setAlsoLocatedInIds(ids);
          }
          p.setLevel(Integer.parseInt(fields[6]));
-         p.setCountry(Integer.parseInt(fields[7]));
+         p.setCountryId(Integer.parseInt(fields[7]));
          if (fields.length > 8 && fields[8].length() > 0) p.setLatitude(Double.parseDouble(fields[8]));
          if (fields.length > 9 && fields[9].length() > 0) p.setLongitude(Double.parseDouble(fields[9]));
          if (fields.length > 10 && fields[10].length() > 0) setSources(p, fields[10].split("~"));
@@ -438,7 +440,7 @@ public class Standardizer {
       String normalizedName = normalizer.normalize(p.getName());
       boolean isPrimaryNameMatch = normalizedName.indexOf(nameToken) >= 0;
       int level = p.getLevel();
-      int countryId = p.getCountry();
+      int countryId = p.getCountryId();
       Double[] weights;
 
       if (largeCountries.contains(countryId)) {
@@ -530,7 +532,7 @@ public class Standardizer {
       for (int id : ids) {
          Place p = getPlace(id);
          if (p.getLevel() == 1 ||
-             (p.getLevel() == 2 && p.getCountry() == USA_ID)) {
+             (p.getLevel() == 2 && p.getCountryId() == USA_ID)) {
             return false;
          }
       }

@@ -16,33 +16,42 @@
 
 package org.folg.places.service;
 
-import org.folg.places.standardize.Place;
 import org.folg.places.standardize.Standardizer;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.List;
 
 /**
  *  Return standardized place
  */
 @Path("/standardize")
+@Produces(MediaType.APPLICATION_JSON)
 public class StandardizeService {
    @GET
-   @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
    @Path("{text}")
-   public Place get(@PathParam("text") String text) {
-      Place result = Standardizer.getInstance().standardize(text);
-      return result;
-   }
+   public List<Standardizer.PlaceScore> get(
+           @PathParam("text") String text,
+           @QueryParam("defaultCountry") String defaultCountry, // TODO currently unavailable
+           @QueryParam("mode") String modeString,
+           @QueryParam("count") int count) {
 
-   @GET
-   @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-   @Path("{text}/{defaultCountry}")
-   public Place get(@PathParam("text") String text, @PathParam("defaultCountry") String defaultCountry) {
-      Place result = Standardizer.getInstance().standardize(text, defaultCountry);
-      return result;
+      Standardizer.Mode mode = Standardizer.Mode.BEST;
+      if ("required".equalsIgnoreCase(modeString)) {
+         mode = Standardizer.Mode.REQUIRED;
+      }
+      else if ("new".equalsIgnoreCase(modeString)) {
+         mode = Standardizer.Mode.NEW;
+      }
+
+      if (count <= 0) {
+         count = 1;
+      }
+      else if (count > 10) {
+         count = 10;
+      }
+
+      List<Standardizer.PlaceScore> results  = Standardizer.getInstance().standardize(text, defaultCountry, mode, count);
+      return results;
    }
 }

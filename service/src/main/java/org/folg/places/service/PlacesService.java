@@ -16,17 +16,21 @@
 
 package org.folg.places.service;
 
-import javax.ws.rs.core.Application;
-import java.util.HashSet;
-import java.util.Set;
+import org.folg.places.standardize.Place;
+import org.folg.places.standardize.Standardizer;
+
+import javax.ws.rs.*;
+import javax.ws.rs.core.MediaType;
 
 /**
- * Boilerplate class to make JAX-RS work
+ *  Look up place
  */
-public class ServiceManager extends Application {
-   public Set<Class<?>> getClasses() {
-      Set<Class<?>> s = new HashSet<Class<?>>();
-      s.add(StandardizeService.class);
-      return s;
+@Path("/places")
+@Produces(MediaType.APPLICATION_JSON)
+public class PlacesService {
+   @GET
+   @Path("{id}")
+   public Place get(@PathParam("id") int id) {
+      return Standardizer.getInstance().getPlace(id);
    }
 }

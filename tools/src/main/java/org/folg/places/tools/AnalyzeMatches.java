@@ -70,7 +70,7 @@ public class AnalyzeMatches {
          Place p = standardizer.standardize(nextLine);
          if (p != null) {
             int level = p.getLevel();
-            int countryId = p.getCountry();
+            int countryId = p.getCountryId();
             String fullName = p.getFullName();
             int pos = fullName.lastIndexOf(",");
             String countryName;

@@ -32,7 +32,11 @@ public class Place {
          this.altName = altName;
          this.source = source;
       }
+      public AltName() {
+         this(null, null);
+      }
    }
+
    public static class Source {
       public String source;
       public String id;
@@ -40,19 +44,22 @@ public class Place {
          this.source = source;
          this.id = id;
       }
+      public Source() {
+         this(null, null);
+      }
    }
 
    private int id = 0;
    private String name = null;
-   private AltName[] altNames = null;
-   private String[] types = null;
+   private AltName[] altNames = new AltName[0];
+   private String[] types = new String[0];
    private int locatedInId = 0;
-   private int[] alsoLocatedInIds = null;
+   private int[] alsoLocatedInIds = new int[0];
    private int level = 0;
-   private int country = 0;
+   private int countryId = 0;
    private double latitude = 0.0;
    private double longitude = 0.0;
-   private Source[] sources = null;
+   private Source[] sources = new Source[0];
    private Standardizer standardizer = null;
 
    public int getId() {
@@ -76,7 +83,7 @@ public class Place {
    }
 
    public void setAltNames(AltName[] altNames) {
-      this.altNames = altNames;
+      this.altNames = altNames == null ? new AltName[0] : altNames;
    }
 
    public String[] getTypes() {
@@ -84,7 +91,7 @@ public class Place {
    }
 
    public void setTypes(String[] types) {
-      this.types = types;
+      this.types = types == null ? new String[0] : types;
    }
 
    public int getLocatedInId() {
@@ -100,7 +107,7 @@ public class Place {
    }
 
    public void setAlsoLocatedInIds(int[] alsoLocatedInIds) {
-      this.alsoLocatedInIds = alsoLocatedInIds;
+      this.alsoLocatedInIds = alsoLocatedInIds == null ? new int[0] : alsoLocatedInIds;
    }
 
    public int getLevel() {
@@ -111,12 +118,12 @@ public class Place {
       this.level = level;
    }
 
-   public int getCountry() {
-      return country;
+   public int getCountryId() {
+      return countryId;
    }
 
-   public void setCountry(int country) {
-      this.country = country;
+   public void setCountryId(int countryId) {
+      this.countryId = countryId;
    }
 
    public double getLatitude() {
@@ -140,7 +147,7 @@ public class Place {
    }
 
    public void setSources(Source[] sources) {
-      this.sources = sources;
+      this.sources = sources == null ? new Source[0] : sources;
    }
 
    void setStandardizer(Standardizer standardizer) {
