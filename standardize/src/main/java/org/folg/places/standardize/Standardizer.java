@@ -813,7 +813,7 @@ public class Standardizer {
                errorLogged = true;
             }
          }
-         else {
+         else if (currentIds.size() > 0) {
             Place p = getPlace(currentIds.get(0));
             results.add(new PlaceScore(p, scoreMatch(currentNameToken, p)));
          }
