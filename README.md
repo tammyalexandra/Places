@@ -60,6 +60,8 @@ This application is currently running on heroku as a REST service.  You can acce
 
 The standardize service accepts an optional `max` query parameter, which governs the maximum number of places to return.
 The default is 3; the greatest possible value is 100.
+It also accepts an optional `mode` query parameter, corresponding to the algorithm mode described above.
+The default mode is `best`.
 
 For example,
 

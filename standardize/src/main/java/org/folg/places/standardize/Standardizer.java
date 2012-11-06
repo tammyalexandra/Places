@@ -182,6 +182,9 @@ public class Standardizer {
                    if (rs.next()) {
                       ids = constructPlaceWords(rs.getString("ids"));
                    }
+                   else {
+                      ids = new Integer[0];
+                   }
                 } catch (SQLException e) {
                    logger.severe("Error reading place_words: "+e);
                 } finally {
